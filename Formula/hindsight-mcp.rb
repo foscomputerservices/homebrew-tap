@@ -62,8 +62,8 @@ class HindsightMcp < Formula
       echo ""
       echo "Hindsight initialized at $HINDSIGHT_DIR"
       echo ""
-      echo "Configure Claude Code:"
-      echo "  claude mcp add hindsight -- #{opt_bin}/hindsight-server"
+      echo "Configure Claude Code (globally for all projects):"
+      echo "  claude mcp add --scope user hindsight -- #{opt_bin}/hindsight-server"
       echo ""
     BASH
   end
@@ -72,8 +72,8 @@ class HindsightMcp < Formula
     <<~EOS
       Run 'hindsight-init' to set up your database.
 
-      Then configure Claude Code:
-        claude mcp add hindsight -- #{opt_bin}/hindsight-server
+      Then configure Claude Code (globally for all projects):
+        claude mcp add --scope user hindsight -- #{opt_bin}/hindsight-server
 
       Or Claude Desktop (add to claude_desktop_config.json):
         {
