@@ -13,7 +13,9 @@ class HindsightMcp < Formula
   license "MIT"
   head "https://github.com/foscomputerservices/hindsight-mcp.git", branch: "main"
 
+  depends_on "openssl@3"
   depends_on "python@3.12"
+  depends_on "rust" => :build
 
   # All dependencies including transitive ones for mcp package
   # Generated from mcp 1.23.1 dependency tree
