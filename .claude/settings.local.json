@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 show:*)",
+      "Bash(curl:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load(sys.stdin); info=d[''''info'''']; print(f\"\"Version: {info[''''version'''']}\"\"); print(f\"\"Requires: {info.get(''''requires_dist'''', [])}\"\"); urls=d[''''urls'''']; sdist=[u for u in urls if u[''''packagetype'''']==''''sdist'''']; print(f\"\"URL: {sdist[0][''''url''''] if sdist else ''''N/A''''}\"\"); print(f\"\"SHA256: {sdist[0][''''digests''''][''''sha256''''] if sdist else ''''N/A''''}\"\")\")",
+      "Bash(python3:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

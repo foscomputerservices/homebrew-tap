@@ -1,0 +1,79 @@
+name: Publish Formula
+
+on:
+  workflow_dispatch:
+    inputs:
+      formula:
+        description: 'Formula name (e.g., hindsight-mcp)'
+        required: true
+        type: string
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+      sha256:
+        description: 'SHA256 of the release tarball'
+        required: true
+        type: string
+
+  repository_dispatch:
+    types: [formula-release]
+
+jobs:
+  update-formula:
+    name: Update Formula
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "formula=${{ github.event.client_payload.formula }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+            echo "sha256=${{ github.event.client_payload.sha256 }}" >> $GITHUB_OUTPUT
+          else
+            echo "formula=${{ inputs.formula }}" >> $GITHUB_OUTPUT
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "sha256=${{ inputs.sha256 }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update formula
+        run: |
+          FORMULA="Formula/${{ steps.vars.outputs.formula }}.rb"
+          VERSION="${{ steps.vars.outputs.version }}"
+          SHA256="${{ steps.vars.outputs.sha256 }}"
+
+          if [ ! -f "$FORMULA" ]; then
+            echo "Formula not found: $FORMULA"
+            exit 1
+          fi
+
+          # Update version in URL
+          sed -i "s|/archive/refs/tags/v[0-9.]*\.tar\.gz|/archive/refs/tags/v${VERSION}.tar.gz|g" "$FORMULA"
+
+          # Update SHA256
+          sed -i "s/sha256 \"[a-fA-F0-9]*\"/sha256 \"${SHA256}\"/" "$FORMULA"
+          sed -i "s/sha256 \"PLACEHOLDER[^\"]*\"/sha256 \"${SHA256}\"/" "$FORMULA"
+
+          echo "Updated $FORMULA to version $VERSION"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update ${{ steps.vars.outputs.formula }} to v${{ steps.vars.outputs.version }}"
+          title: "Update ${{ steps.vars.outputs.formula }} to v${{ steps.vars.outputs.version }}"
+          body: |
+            Automated formula update.
+
+            - Formula: `${{ steps.vars.outputs.formula }}`
+            - Version: `${{ steps.vars.outputs.version }}`
+            - SHA256: `${{ steps.vars.outputs.sha256 }}`
+          branch: "update-${{ steps.vars.outputs.formula }}-${{ steps.vars.outputs.version }}"
+          delete-branch: true

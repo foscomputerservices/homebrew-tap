@@ -1,0 +1,85 @@
+name: Weekly Audit
+
+on:
+  schedule:
+    # Run every Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Audit Dependencies
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap this repo
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/foscomputerservices"
+          ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/foscomputerservices/homebrew-tap"
+
+      - name: Check for outdated Python dependencies
+        run: |
+          echo "## Dependency Check Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for formula in Formula/*.rb; do
+            name=$(basename "$formula" .rb)
+            echo "### $name" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Extract Python resources and check PyPI for updates
+            grep -A2 'resource "' "$formula" | grep 'url "https://files.pythonhosted.org' | while read -r line; do
+              pkg=$(echo "$line" | grep -oP '(?<=/)[^/]+(?=-[0-9])' | head -1)
+              if [ -n "$pkg" ]; then
+                current=$(echo "$line" | grep -oP '(?<=-)[0-9][^/]+(?=\.tar\.gz)')
+                latest=$(curl -s "https://pypi.org/pypi/$pkg/json" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])" 2>/dev/null || echo "unknown")
+                if [ "$current" != "$latest" ] && [ "$latest" != "unknown" ]; then
+                  echo "- **$pkg**: $current -> $latest (update available)" >> $GITHUB_STEP_SUMMARY
+                fi
+              fi
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: Full audit
+        run: |
+          for formula in Formula/*.rb; do
+            name=$(basename "$formula" .rb)
+            echo "Auditing $name..."
+            brew audit --strict "$name" 2>&1 || true
+          done
+
+  check-urls:
+    name: Check Download URLs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify URLs are accessible
+        run: |
+          echo "## URL Check Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check formula URLs
+          for formula in Formula/*.rb; do
+            name=$(basename "$formula" .rb)
+            echo "### $name" >> $GITHUB_STEP_SUMMARY
+
+            grep -oP 'url "\K[^"]+' "$formula" | while read -r url; do
+              status=$(curl -sI -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+              if [ "$status" = "200" ] || [ "$status" = "302" ]; then
+                echo "- $url: OK" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "- $url: **FAILED** ($status)" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done

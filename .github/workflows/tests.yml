@@ -1,0 +1,78 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  syntax:
+    name: Syntax & Style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Check tap syntax
+        run: brew tap-new foscomputerservices/test && brew audit --tap foscomputerservices/test || true
+
+      - name: Lint Ruby files
+        run: |
+          brew install rubocop
+          rubocop Formula/*.rb Casks/*.rb 2>/dev/null || true
+
+  test-formulas:
+    name: Test Formulas
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap this repo
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/foscomputerservices"
+          ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/foscomputerservices/homebrew-tap"
+
+      - name: Audit formulas
+        run: |
+          for formula in Formula/*.rb; do
+            name=$(basename "$formula" .rb)
+            echo "Auditing $name..."
+            brew audit --strict "$name" || true
+          done
+
+      - name: Test formulas (dry run)
+        run: |
+          for formula in Formula/*.rb; do
+            name=$(basename "$formula" .rb)
+            echo "Checking $name dependencies..."
+            brew deps "$name" || true
+          done
+
+  test-casks:
+    name: Test Casks
+    runs-on: macos-latest
+    if: ${{ hashFiles('Casks/*.rb') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap this repo
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/foscomputerservices"
+          ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/foscomputerservices/homebrew-tap"
+
+      - name: Audit casks
+        run: |
+          for cask in Casks/*.rb; do
+            name=$(basename "$cask" .rb)
+            echo "Auditing $name..."
+            brew audit --cask "$name" || true
+          done
