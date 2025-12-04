@@ -8,8 +8,8 @@ class HindsightMcp < Formula
 
   desc "MCP server for searchable knowledge base of development learnings"
   homepage "https://github.com/foscomputerservices/hindsight-mcp"
-  url "https://github.com/foscomputerservices/hindsight-mcp/archive/refs/tags/v1.0.1.tar.gz"
-  sha256 "e67c706ec0629c9648995fbef95424b3b05321333e03d14f07b9f8cdaff7a5d4"
+  url "https://github.com/foscomputerservices/hindsight-mcp/archive/refs/tags/v1.0.2.tar.gz"
+  sha256 "5828ca3b524905e3b8dc1c4844afcbf2c2ff66a77b00472c1fcc525c23966371"
   license "MIT"
   head "https://github.com/foscomputerservices/hindsight-mcp.git", branch: "main"
 
